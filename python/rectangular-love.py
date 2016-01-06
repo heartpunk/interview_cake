@@ -22,14 +22,14 @@ def overlap(first, second):
         # the endpoints must differ on only one dimension for this to be
         # either a vertical or horizontal line.
         assert not (differ_in_x and differ_in_y)
+        assert differ_in_x or differ_in_y
 
-        if differ_in_x:
-            return "horizontal"
-        elif differ_in_y:
-            return "vertical"
+        return "horizontal" if differ_in_x else "vertical"
 
-    def _side(base, offset, dimension):
+    def _side(rect, offset, dimension, x_offset=0, y_offset=0):
         assert dimension in ("x", "y")
+
+        base = (rect["x"] + x_offset, rect["y"] + y_offset)
 
         if dimension == "x":
             other_end = (base[0] + offset, base[1])
@@ -40,37 +40,23 @@ def overlap(first, second):
 
 
     def left_side(rectangle):
-        base_x = rectangle["x"]
-        base_y = rectangle["y"]
-        return _side((base_x, base_y), rectangle["height"], "y")
+        return _side(rectangle, rectangle["height"], "y")
 
     def right_side(rectangle):
-        base_x = rectangle["x"] + rectangle["width"]
-        base_y = rectangle["y"]
-
-        return _side((base_x, base_y), rectangle["height"], "y")
+        return _side(rectangle, rectangle["height"], "y", x_offset=rectangle["width"])
 
     def bottom_side(rectangle):
-        base_x = rectangle["x"]
-        base_y = rectangle["y"]
-
-        return _side((base_x, base_x), rectangle["width"], "x")
+        return _side(rectangle, rectangle["width"], "x")
 
     def top_side(rectangle):
-        base_x = rectangle["x"]
-        base_y = rectangle["y"] + rectangle["height"]
+        return _side(rectangle, rectangle["width"], "x", y_offset=rectangle["height"])
 
-        return _side((base_x, base_y), rectangle["width"], "x")
+    outer_locals = locals()
 
     def side_from_name(side, rectangle):
-        if side == "left":
-            return left_side(rectangle)
-        if side == "right":
-            return right_side(rectangle)
-        if side == "bottom":
-            return bottom_side(rectangle)
-        if side == "top":
-            return top_side(rectangle)
+        assert side in ("left", "right", "bottom", "top")
+
+        return outer_locals["%s_side" % side](rectangle)
 
     def side_contained(side, this_rect=first, other_rect=second):
         return within_bounds(side_from_name(side, this_rect), other_rect)
@@ -87,10 +73,7 @@ def overlap(first, second):
             midpoint = line[0][0]
             upper_bound = rectangle["x"] + rectangle["width"]
 
-        prop = lower_bound <= midpoint <= upper_bound
-        print lower_bound, midpoint, upper_bound, prop
-
-        return prop
+        return lower_bound <= midpoint <= upper_bound
 
     contained_sides = []
     for base_rect, other_rect in [[first, second], [second, first]]:
